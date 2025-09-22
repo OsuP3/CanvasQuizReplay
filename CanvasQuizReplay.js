@@ -5,9 +5,10 @@ function collectQuiz() {
         const quiz_questions = Array.from(document.querySelectorAll('[aria-label="Question"]'));
         const quiz_data = quiz_questions.map((question, index) => {
             // question text
-            const qText = question.querySelector('.question_text.user_content.enhanced')?.innerText.trim()
-                || question.querySelector('.question_text')?.innerText.trim()
-                || `Question ${index+1}`;
+            // preserve HTML (images, MathJax SVGs, inline math) so replay can render them identically
+            const qText = question.querySelector('.question_text.user_content.enhanced')?.innerHTML.trim()
+                || question.querySelector('.question_text')?.innerHTML.trim()
+                 || `Question ${index+1}`;
 
             // detect question type from hidden meta or class names
             const qTypeNode = question.querySelector('.question_type');
@@ -23,9 +24,10 @@ function collectQuiz() {
             // collect answer elements
             const answerEls = Array.from(question.querySelectorAll('.answer'));
             const answers = answerEls.map(aEl => {
-                const text = aEl.querySelector('.answer_text')?.innerText?.trim()
+                // preserve answer HTML when available
+                const text = aEl.querySelector('.answer_text')?.innerHTML?.trim()
                     || aEl.querySelector('input[name="answer_text"]')?.value?.trim()
-                    || aEl.innerText?.trim() || '';
+                    || aEl.innerHTML?.trim() || '';
                 // correctness markers in Canvas: "correct_answer" or "correct" class, sometimes "selected_answer correct_answer"
                 const isCorrect = /\b(correct_answer|correct)\b/.test(aEl.className || '');
                 // weight may exist

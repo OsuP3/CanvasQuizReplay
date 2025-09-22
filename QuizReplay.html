@@ -6,7 +6,27 @@
     <title>Quiz Replay</title>
     <style>
       body{font-family:Arial,Helvetica,sans-serif;margin:16px}
-      .question{border:1px solid #ddd;padding:10px;margin-bottom:12px;border-radius:6px}
+      .question { border:1px solid #ddd; padding:10px; margin-bottom:12px; border-radius:6px; line-height:1.35; }
+      .question p { margin: 0 0 0.8em; }
+      .question img,
+      .question svg,
+      .question .MathJax_SVG {
+        display: inline-block;
+        width: auto;
+        height: 1em;
+        max-height: 1.25em;
+        line-height: 1;
+        vertical-align: -0.15em;
+        overflow: visible;
+      }
+      .question .MathJax_SVG svg,
+      .question svg {
+        margin-left: -0.12em;
+        transform: translateX(-0.12em);
+        transform-origin: 0 50%;
+      }
+      .math_equation_latex { display: inline; font-size: large;}
+      .MathJax_SVG { display: inline-block; }
       .answers{margin-top:8px}
       .answer{margin:6px 0}
       .correct{color:green;font-weight:600}
@@ -16,6 +36,17 @@
       button{padding:8px 12px;font-size:14px}
       .score{font-size:1.1em;margin-bottom:10px}
       .disabled {opacity:0.6; pointer-events:none}
+      .question table { margin-top: 0.5em; margin-bottom: 0.8em; }
+      .question p { line-height: 1.25; }
+      .question .MathJax_SVG,
+      .question svg {
+        display: inline-block;   
+        height: 1em;            
+        width: auto;       
+        max-height: none;
+        vertical-align: baseline;
+        overflow: visible;
+      }
     </style>
 </head>
 <body>
