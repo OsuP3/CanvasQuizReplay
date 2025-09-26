@@ -7,46 +7,69 @@
     <style>
       body{font-family:Arial,Helvetica,sans-serif;margin:16px}
       .question { border:1px solid #ddd; padding:10px; margin-bottom:12px; border-radius:6px; line-height:1.35; }
-      .question p { margin: 0 0 0.8em; }
-      .question img,
-      .question svg,
-      .question .MathJax_SVG {
+      .question p { margin: 0 0 0.8em; line-height: 1.25; }
+
+      .math_equation_latex { display: inline; font-size: large; }
+      .MathJax_SVG { display: inline-block; }
+
+      /* inline math: match surrounding text height and baseline */
+      .question .MathJax_SVG,
+      .question svg.math-inline {
         display: inline-block;
-        width: auto;
         height: 1em;
-        max-height: 1.25em;
-        line-height: 1;
-        vertical-align: -0.15em;
+        width: auto;
+        vertical-align: -0.12em;
         overflow: visible;
       }
-      .question .MathJax_SVG svg,
-      .question svg {
-        margin-left: -0.12em;
-        transform: translateX(-0.12em);
-        transform-origin: 0 50%;
+
+      /* general SVGs (diagrams) should scale naturally and not be forced to 1em */
+      .question svg:not(.math-inline) {
+        max-width: 100%;
+        height: auto;
       }
-      .math_equation_latex { display: inline; font-size: large;}
-      .MathJax_SVG { display: inline-block; }
+
+      /* inline images readable size while preserving large images */
+      .question img {
+        display:inline-block;
+        vertical-align: middle;
+        max-height: 2.2em;
+        width: auto;
+        margin: 0 .25em;
+        cursor: zoom-in;
+      }
+
+      /* images that have explicit sizes or are marked fullsize should render at natural size */
+      .question img[width],
+      .question img[height],
+      .question img.fullsize,
+      .question img[data-fullsize="true"] {
+        max-height: none;
+        height: auto;
+        max-width: 100%;
+        width: auto;
+      }
+
+      /* full-size images (tables, figures) */
+      .question table img,
+      .question img.fullsize {
+        max-height: none;
+        max-width: 100%;
+        height: auto;
+        width: auto;
+      }
+
       .answers{margin-top:8px}
       .answer{margin:6px 0}
+      .range-hint{color:#444}
       .correct{color:green;font-weight:600}
       .incorrect{color:#b00020;font-weight:600}
       .feedback{margin-top:8px;font-size:0.95em}
+  .expected-hint{color:#333;background:#f8f8f8;padding:6px;border-radius:4px;margin-top:6px}
       .controls{margin:14px 0}
       button{padding:8px 12px;font-size:14px}
       .score{font-size:1.1em;margin-bottom:10px}
       .disabled {opacity:0.6; pointer-events:none}
       .question table { margin-top: 0.5em; margin-bottom: 0.8em; }
-      .question p { line-height: 1.25; }
-      .question .MathJax_SVG,
-      .question svg {
-        display: inline-block;   
-        height: 1em;            
-        width: auto;       
-        max-height: none;
-        vertical-align: baseline;
-        overflow: visible;
-      }
     </style>
 </head>
 <body>
@@ -58,6 +81,15 @@
       <button id="reset-btn" style="margin-left:8px">Reset</button>
       <div id="result" style="margin-top:10px"></div>
     </div>
+
+    <script>
+      document.addEventListener('click', (e) => {
+        const img = e.target && e.target.tagName === 'IMG' && e.target.closest('.question');
+        if (!img) return;
+        const src = img.getAttribute('src');
+        if (src) window.open(src, '_blank');
+      });
+    </script>
 
     <script src="replay.js"></script>
 </body>

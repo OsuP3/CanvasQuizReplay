@@ -18,44 +18,104 @@ function collectQuiz() {
                 if (cls.includes('numerical_question')) qType = 'numerical_question';
                 else if (cls.includes('true_false_question')) qType = 'true_false_question';
                 else if (cls.includes('multiple_choice_question')) qType = 'multiple_choice_question';
+                else if (cls.includes('essay_question')) qType = 'essay_question';
+                else if (cls.includes('short_answer_question')) qType = 'short_answer_question';
                 else qType = 'unknown';
             }
 
             // collect answer elements
             const answerEls = Array.from(question.querySelectorAll('.answer'));
             const answers = answerEls.map(aEl => {
-                // preserve answer HTML when available
-                const text = aEl.querySelector('.answer_text')?.innerHTML?.trim()
-                    || aEl.querySelector('input[name="answer_text"]')?.value?.trim()
-                    || aEl.innerHTML?.trim() || '';
+                // extract answer HTML and plain text. prefer .answer_html (Canvas stores richer markup there)
+                const answerHtml = aEl.querySelector('.answer_html')?.innerHTML?.trim() || null;
+                const answerTextNode = aEl.querySelector('.answer_text');
+                const answerText = answerTextNode ? (answerTextNode.innerText || answerTextNode.textContent || '').trim() :
+                    (aEl.querySelector('input[name="answer_text"]')?.value?.trim() || (aEl.innerText || '').trim());
                 // correctness markers in Canvas: "correct_answer" or "correct" class, sometimes "selected_answer correct_answer"
                 const isCorrect = /\b(correct_answer|correct)\b/.test(aEl.className || '');
                 // weight may exist
                 const weight = aEl.querySelector('.answer_weight')?.innerText || null;
-                return { text, isCorrect, weight };
+                return { text: answerText || '', html: answerHtml, isCorrect, weight };
             });
 
             // numeric/text expected answers (numerical_exact_answer etc.)
             let expected = null;
+            let expectedHtml = null;
             let tolerance = null;
-            const numExact = question.querySelector('.numerical_exact_answer .answer_exact')?.innerText;
-            const numMargin = question.querySelector('.numerical_exact_answer .answer_error_margin')?.innerText
-                || question.querySelector('.numerical_exact_answer .answer_tolerance')?.innerText;
-            const numEquation = question.querySelector('.numerical_range_answer .answer_equation')?.innerText;
-            if (numExact) {
-                expected = numExact.trim();
-                if (numMargin) {
-                    const parsed = parseFloat(numMargin);
-                    if (!isNaN(parsed)) tolerance = parsed;
+            let expectedRange = null; // {start, end} for range answers
+
+            // Prefer explicit short-answer inputs when this is a short_answer question or when
+            // a visible short-answer value exists. Some Canvas markup includes hidden numerical_* spans
+            // (often with 0) even on short-answer questions; prefer the human-readable short answer
+            // (e.g. "O(1)") when present so numeric '0' doesn't override it.
+            let shortCandidate = null;
+            try {
+                // visible question input (e.g. class question_input) or named answer_text inputs
+                const qInput = question.querySelector('.question_input, input[name="answer_text"], .answer_type.short_answer input, input.question_input');
+                if (qInput) {
+                    const v = (qInput.value || qInput.getAttribute('value') || qInput.innerText || qInput.textContent || '').trim();
+                    if (v !== '') shortCandidate = v;
                 }
-            } else if (numEquation) {
-                expected = numEquation.trim();
-            } else {
-                // also check for short_answer field value inside hidden short_answer block
-                const shortVal = question.querySelector('.answer_type.short_answer input[name="answer_text"]')?.value;
-                if (shortVal) expected = shortVal.trim();
+                // fallback to answer_text element text if present
+                if (!shortCandidate) {
+                    const at = question.querySelector('.answer .answer_text, .answer_text');
+                    if (at) {
+                        // prefer innerHTML so MathJax/SVG/LaTeX preserved
+                        const html = at.innerHTML?.trim();
+                        const txt = (at.innerText || at.textContent) ? (at.innerText || at.textContent).trim() : '';
+                        if (html && html !== '') {
+                            shortCandidate = txt || html.replace(/<[^>]+>/g, '').trim();
+                            expectedHtml = html;
+                        } else if (txt !== '') {
+                            shortCandidate = txt;
+                        }
+                    }
+                }
+            } catch (e) {
+                // ignore and continue to numeric checks
             }
 
+            if (shortCandidate) {
+                expected = shortCandidate;
+                // if we didn't find expectedHtml earlier, try to get it from answers array
+                if (!expectedHtml) {
+                    const a = answers.find(a => (a.html && a.html.trim() !== '') || (a.text && a.text.trim() !== ''));
+                    if (a) expectedHtml = a.html || a.text;
+                }
+            }
+
+            // only consider numerical/range detection if we didn't already pick a short-answer expected
+            if (!expected) {
+                const numExact = question.querySelector('.numerical_exact_answer .answer_exact')?.innerText;
+                const numMargin = question.querySelector('.numerical_exact_answer .answer_error_margin')?.innerText
+                    || question.querySelector('.numerical_exact_answer .answer_tolerance')?.innerText;
+                const numEquation = question.querySelector('.numerical_range_answer .answer_equation')?.innerText;
+                // explicit range values (visible range)
+                const numRangeStart = question.querySelector('.numerical_range_answer .answer_range_start')?.innerText;
+                const numRangeEnd = question.querySelector('.numerical_range_answer .answer_range_end')?.innerText;
+                if (numExact) {
+                    expected = numExact.trim();
+                    if (numMargin) {
+                        const parsed = parseFloat(numMargin);
+                        if (!isNaN(parsed)) tolerance = parsed;
+                    }
+                } else if (numEquation) {
+                    expected = numEquation.trim();
+                } else if (numRangeStart || numRangeEnd) {
+                    // prefer explicit range start/end when present
+                    const s = numRangeStart ? parseFloat(numRangeStart) : NaN;
+                    const e = numRangeEnd ? parseFloat(numRangeEnd) : NaN;
+                    if (!isNaN(s) || !isNaN(e)) {
+                        expectedRange = {
+                            start: !isNaN(s) ? s : null,
+                            end: !isNaN(e) ? e : null
+                        };
+                    }
+                }
+                console.log(index, numExact, numEquation, numRangeStart, numRangeEnd, expected);
+            } else {
+                console.log(index, 'short-answer preferred:', expected, 'html?', !!expectedHtml);
+            }
             // determine if multi-select: more than one correct marker among answers OR a DOM hint
             const correctCount = answers.filter(a => a.isCorrect).length;
             const multiple = correctCount > 1 || /\bmultiple_answers_question\b/.test(question.className || '');
@@ -68,6 +128,8 @@ function collectQuiz() {
                 finalType = 'true_false';
             } else if (qType.includes('numerical')) {
                 finalType = 'numerical';
+            } else if (qType.includes('short_answer')) {
+                finalType = 'short_answer'
             } else {
                 finalType = 'multiple_choice';
             }
@@ -79,7 +141,9 @@ function collectQuiz() {
                 multiple,             // allow multiple selection if true
                 answers,              // array of {text, isCorrect, weight}
                 expected,             // for numerical/text when present
-                tolerance             // numeric tolerance if available
+                expectedHtml,
+                tolerance,            // numeric tolerance if available
+                expectedRange         // range object if available
             };
         });
 
