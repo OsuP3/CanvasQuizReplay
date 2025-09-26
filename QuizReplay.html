@@ -59,7 +59,10 @@
       }
 
       .answers{margin-top:8px}
-      .answer{margin:6px 0}
+  .answer{margin:6px 0; display:flex; align-items:flex-start; gap:8px}
+  .answer > input[type="radio"], .answer > input[type="checkbox"] { margin-top:0.15em }
+  /* Inline wrapper used when normalizing paragraphs/divs in option HTML */
+  .option-inline{display:inline;}
       .range-hint{color:#444}
       .correct{color:green;font-weight:600}
       .incorrect{color:#b00020;font-weight:600}

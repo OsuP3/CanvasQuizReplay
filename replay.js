@@ -22,6 +22,21 @@ if (document.getElementById && document.getElementById('quiz-container')) {
         }
 
         const rawHTML = (s) => (s == null ? '' : s);
+        // Normalize option HTML so block-level tags like <p> and <div> don't force options onto new lines.
+        // This preserves inner markup (tables, images, math) but prevents paragraphs from breaking layout.
+        function normalizeOptionHtml(html) {
+            if (!html) return '';
+            // replace opening <p ...> with <span class="option-inline"> and closing </p> with </span>
+            let out = String(html);
+            out = out.replace(/<\s*p[^>]*>/gi, '<span class="option-inline">');
+            out = out.replace(/<\s*\/\s*p\s*>/gi, '</span>');
+            // replace divs similarly (many Canvas option wrappers use divs)
+            out = out.replace(/<\s*div[^>]*>/gi, '<span class="option-inline">');
+            out = out.replace(/<\s*\/\s*div\s*>/gi, '</span>');
+            // remove empty spans created accidentally
+            out = out.replace(/<span class="option-inline">\s*<\/span>/gi, '');
+            return out;
+        }
 
         // render UI
         quizContainer.innerHTML = '';
@@ -96,7 +111,7 @@ if (document.getElementById && document.getElementById('quiz-container')) {
                         label.htmlFor = input.id;
                         label.style.marginLeft = '8px';
                         // prefer rich HTML for options (tables, images, math) when available
-                        label.innerHTML = rawHTML(opt.html || opt.text || '');
+                        label.innerHTML = normalizeOptionHtml(rawHTML(opt.html || opt.text || ''));
 
                         aDiv.appendChild(input);
                         aDiv.appendChild(label);
@@ -117,7 +132,7 @@ if (document.getElementById && document.getElementById('quiz-container')) {
                         const label = document.createElement('label');
                         label.htmlFor = input.id;
                         label.style.marginLeft = '8px';
-                        label.innerHTML = rawHTML(opt.html || opt.text || '');
+                        label.innerHTML = normalizeOptionHtml(rawHTML(opt.html || opt.text || ''));
 
                         aDiv.appendChild(input);
                         aDiv.appendChild(label);
@@ -159,7 +174,7 @@ if (document.getElementById && document.getElementById('quiz-container')) {
                     const aDiv = document.createElement('div');
                     aDiv.className = 'answer';
                     const span = document.createElement('span');
-                    span.innerHTML = rawHTML(opt.html || opt.text || '');
+                    span.innerHTML = normalizeOptionHtml(rawHTML(opt.html || opt.text || ''));
                     aDiv.appendChild(span);
                     answersWrap.appendChild(aDiv);
                 });
